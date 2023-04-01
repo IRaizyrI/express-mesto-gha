@@ -35,7 +35,7 @@ exports.createCard = async (req, res) => {
 exports.likeCard = async (req, res) => {
   try {
     if (req.params.cardId.length !== 24 || !mongoose.Types.ObjectId.isValid(req.params.cardId)) {
-      res.status(404).json({ message: 'Card not found' });
+      res.status(400).json({ message: 'Incorrect cardID' });
       return;
     }
     const card = await Card.findByIdAndUpdate(
@@ -56,7 +56,7 @@ exports.likeCard = async (req, res) => {
 exports.dislikeCard = async (req, res) => {
   try {
     if (req.params.cardId.length !== 24 || !mongoose.Types.ObjectId.isValid(req.params.cardId)) {
-      res.status(404).json({ message: 'Card not found' });
+      res.status(400).json({ message: 'Incorrect cardID' });
       return;
     }
     const card = await Card.findByIdAndUpdate(
@@ -76,7 +76,7 @@ exports.dislikeCard = async (req, res) => {
 exports.deleteCard = async (req, res) => {
   try {
     if (req.params.cardId.length !== 24 || !mongoose.Types.ObjectId.isValid(req.params.cardId)) {
-      res.status(404).json({ message: 'Card not found' });
+      res.status(400).json({ message: 'Incorrect cardID' });
       return;
     }
     const card = await Card.findByIdAndDelete(req.params.cardId);

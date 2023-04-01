@@ -13,7 +13,7 @@ exports.getUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     if (req.params.userId.length !== 24 || !mongoose.Types.ObjectId.isValid(req.params.userId)) {
-      res.status(404).json({ message: 'User not found' });
+      res.status(400).json({ message: 'Incorrect ID' });
       return;
     }
     const user = await User.findById(req.params.userId);
