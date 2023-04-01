@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/user');
 
 exports.getUsers = async (req, res) => {
@@ -11,6 +12,10 @@ exports.getUsers = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
   try {
+    if (req.params.userId.length !== 24 || !mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
     const user = await User.findById(req.params.userId);
     if (user) {
       res.status(200).json(user);
@@ -29,6 +34,14 @@ exports.createUser = async (req, res) => {
       res.status(400).json({ message: 'Name, about, and avatar are required fields.' });
       return;
     }
+    if (name.length < 2 || name.length > 30) {
+      res.status(400).json({ message: 'Name must be between 2 and 30 characters' });
+      return;
+    }
+    if (about.length < 2 || about.length > 30) {
+      res.status(400).json({ message: 'About must be between 2 and 30 characters' });
+      return;
+    }
     const user = await User.create({ name, about, avatar });
     res.status(201).json(user);
   } catch (err) {
@@ -41,6 +54,14 @@ exports.updateProfile = async (req, res) => {
     const { name, about } = req.body;
     if (!name && !about) {
       res.status(400).json({ message: 'Name or about required' });
+      return;
+    }
+    if (name && (name.length < 2 || name.length > 30)) {
+      res.status(400).json({ message: 'Name must be between 2 and 30 characters' });
+      return;
+    }
+    if (about && (about.length < 2 || about.length > 30)) {
+      res.status(400).json({ message: 'About must be between 2 and 30 characters' });
       return;
     }
     const updateData = {};
