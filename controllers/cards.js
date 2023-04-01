@@ -39,7 +39,7 @@ exports.likeCard = async (req, res) => {
       req.params.cardId,
       { $addToSet: { likes: req.user._id } },
       { new: true },
-    );
+    ).populate('likes');
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
