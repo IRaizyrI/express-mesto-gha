@@ -12,7 +12,7 @@ const {
 
 exports.getCards = async (req, res) => {
   try {
-    const cards = await Card.find({}).populate('owner');
+    const cards = await Card.find({}).populate('owner').populate('likes');
     res.status(HTTP_STATUS_OK).json(cards);
   } catch (err) {
     res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
@@ -23,6 +23,7 @@ exports.createCard = async (req, res) => {
   try {
     const { name, link } = req.body;
     const card = await Card.create({ name, link, owner: req.user._id });
+    await card.populate('owner');
     res.status(HTTP_STATUS_CREATED).json(card);
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
@@ -39,7 +40,7 @@ exports.likeCard = async (req, res) => {
       req.params.cardId,
       { $addToSet: { likes: req.user._id } },
       { new: true },
-    ).populate('likes');
+    ).populate('likes').populate('owner');
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
@@ -60,7 +61,7 @@ exports.dislikeCard = async (req, res) => {
       req.params.cardId,
       { $pull: { likes: req.user._id } },
       { new: true },
-    );
+    ).populate('likes').populate('owner');
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
@@ -76,7 +77,7 @@ exports.dislikeCard = async (req, res) => {
 };
 exports.deleteCard = async (req, res) => {
   try {
-    const card = await Card.findByIdAndDelete(req.params.cardId);
+    const card = await Card.findByIdAndDelete(req.params.cardId).populate('likes').populate('owner');
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
