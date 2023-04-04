@@ -8,6 +8,7 @@ const {
   HTTP_STATUS_BAD_REQUEST,
   HTTP_STATUS_INTERNAL_SERVER_ERROR,
   HTTP_STATUS_CREATED,
+  HTTP_STATUS_FORBIDDEN,
 } = http2.constants;
 
 exports.getCards = async (req, res) => {
@@ -77,12 +78,20 @@ exports.dislikeCard = async (req, res) => {
 };
 exports.deleteCard = async (req, res) => {
   try {
-    const card = await Card.findByIdAndDelete(req.params.cardId).populate('likes').populate('owner');
-    if (card) {
-      res.status(HTTP_STATUS_OK).json(card);
-    } else {
+    const card = await Card.findById(req.params.cardId);
+
+    if (!card) {
       res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Card not found' });
+      return;
     }
+
+    if (card.owner.toString() !== req.user._id) {
+      res.status(HTTP_STATUS_FORBIDDEN).json({ message: 'You are not allowed to delete this card' });
+      return;
+    }
+
+    await Card.deleteOne({ _id: req.params.cardId });
+    res.status(HTTP_STATUS_OK).json(card);
   } catch (err) {
     if (err instanceof mongoose.Error.CastError) {
       res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Incorrect ID' });

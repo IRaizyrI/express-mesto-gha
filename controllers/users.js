@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const http2 = require('node:http2');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+require('dotenv').config();
 
 const {
   HTTP_STATUS_OK,
@@ -18,14 +21,73 @@ exports.getUsers = async (req, res) => {
     res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Пользователь не найден' });
+      return;
+    }
+
+    res.status(HTTP_STATUS_OK).json(user);
+  } catch (err) {
+    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Ошибка сервера' });
+  }
+};
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid email or password' });
+      return;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid email or password' });
+      return;
+    }
+
+    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
+    });
+
+    res.status(HTTP_STATUS_OK).cookie('jwt', token, {
+      maxAge: 3600000,
+      httpOnly: true,
+    });
+  } catch (err) {
+    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+  }
+};
 
 exports.createUser = async (req, res) => {
   try {
-    const { name, about, avatar } = req.body;
-    const user = await User.create({ name, about, avatar });
+    const {
+      name, about, avatar, email, password,
+    } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hashedPassword,
+    });
+
     res.status(HTTP_STATUS_CREATED).json(user);
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
+      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
+      return;
+    }
+    if (err.code === 11000) {
       res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
       return;
     }
