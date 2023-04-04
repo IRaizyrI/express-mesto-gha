@@ -8,9 +8,9 @@ const { login, createUser } = require('./controllers/users');
 const userRoutes = require('./routes/users');
 const cardRoutes = require('./routes/cards');
 const auth = require('./middlewares/auth');
+const NotFoundError = require('./errors/not-found-err');
 
 const {
-  HTTP_STATUS_NOT_FOUND,
   HTTP_STATUS_INTERNAL_SERVER_ERROR,
 } = http2.constants;
 
@@ -47,22 +47,23 @@ app.post(
       password: Joi.string().required(),
       name: Joi.string().optional().min(2).max(30),
       about: Joi.string().optional().min(2).max(30),
-      avatar: Joi.string().uri({ domain: {} }),
+      avatar: Joi.string().regex(/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/),
     }),
   }),
   createUser,
 );
 app.use('/users', auth, userRoutes);
 app.use('/cards', auth, cardRoutes);
-app.use('', (req, res) => {
-  res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Route not found' });
+app.use('', (req, res, next) => {
+  next(new NotFoundError('Not found'));
 });
 app.use(errors());
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || HTTP_STATUS_INTERNAL_SERVER_ERROR;
-  const message = err.message || 'Internal Server Error';
+  const { message } = err;
   res.status(statusCode).json({ message });
+  // Explicitly call next with 'null' to indicate completed error handling
+  next(null);
 });
 
 app.listen(3000, () => {

@@ -6,7 +6,6 @@ const User = require('../models/user');
 const BadRequestError = require('../errors/bad-request-err');
 const NotFoundError = require('../errors/not-found-err');
 const ConflictError = require('../errors/conflict-err');
-const InternalServerError = require('../errors/internal-server-err');
 const UnauthorizedError = require('../errors/unauthorized-err');
 
 require('dotenv').config();
@@ -22,7 +21,7 @@ exports.getUsers = async (req, res, next) => {
     const users = await User.find({});
     res.status(HTTP_STATUS_OK).json(users);
   } catch (err) {
-    next(new InternalServerError('Error fetching users'));
+    next({ message: 'Something went wrong' });
   }
 };
 exports.getCurrentUser = async (req, res, next) => {
@@ -114,13 +113,9 @@ exports.getUserById = async (req, res, next) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const { name, about } = req.body;
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (about) updateData.about = about;
-
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      updateData,
+      { name, about },
       { new: true, runValidators: true },
     );
     if (user) {
@@ -151,6 +146,10 @@ exports.updateAvatar = async (req, res, next) => {
       throw new NotFoundError('User not found');
     }
   } catch (err) {
-    next(err);
+    if (err instanceof mongoose.Error.ValidationError) {
+      next(new BadRequestError('Invalid Data'));
+    } else {
+      next(err);
+    }
   }
 };

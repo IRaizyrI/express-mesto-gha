@@ -1,26 +1,25 @@
 const mongoose = require('mongoose');
 const http2 = require('node:http2');
 const Card = require('../models/card');
+const BadRequestError = require('../errors/bad-request-err');
+const NotFoundError = require('../errors/not-found-err');
+const ForbiddenError = require('../errors/forbidden-err');
 
 const {
   HTTP_STATUS_OK,
-  HTTP_STATUS_NOT_FOUND,
-  HTTP_STATUS_BAD_REQUEST,
-  HTTP_STATUS_INTERNAL_SERVER_ERROR,
   HTTP_STATUS_CREATED,
-  HTTP_STATUS_FORBIDDEN,
 } = http2.constants;
 
-exports.getCards = async (req, res) => {
+exports.getCards = async (req, res, next) => {
   try {
-    const cards = await Card.find({}).populate('owner').populate('likes');
+    const cards = await Card.find({}).populate(['owner', 'likes']);
     res.status(HTTP_STATUS_OK).json(cards);
   } catch (err) {
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+    next(err);
   }
 };
 
-exports.createCard = async (req, res) => {
+exports.createCard = async (req, res, next) => {
   try {
     const { name, link } = req.body;
     const card = await Card.create({ name, link, owner: req.user._id });
@@ -28,14 +27,14 @@ exports.createCard = async (req, res) => {
     res.status(HTTP_STATUS_CREATED).json(card);
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
-      return;
+      next(new BadRequestError('Invalid Data'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
 
-exports.likeCard = async (req, res) => {
+exports.likeCard = async (req, res, next) => {
   try {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
@@ -45,18 +44,18 @@ exports.likeCard = async (req, res) => {
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Card not found' });
+      throw new NotFoundError('Card not found');
     }
   } catch (err) {
     if (err instanceof mongoose.Error.CastError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Incorrect ID' });
-      return;
+      next(new BadRequestError('Incorrect ID'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
 
-exports.dislikeCard = async (req, res) => {
+exports.dislikeCard = async (req, res, next) => {
   try {
     const card = await Card.findByIdAndUpdate(
       req.params.cardId,
@@ -66,37 +65,31 @@ exports.dislikeCard = async (req, res) => {
     if (card) {
       res.status(HTTP_STATUS_OK).json(card);
     } else {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Card not found' });
+      throw new NotFoundError('Card not found');
     }
   } catch (err) {
     if (err instanceof mongoose.Error.CastError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Incorrect ID' });
-      return;
+      next(new BadRequestError('Incorrect ID'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
-exports.deleteCard = async (req, res) => {
+exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
-
-    if (!card) {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Card not found' });
-      return;
-    }
-
     if (card.owner.toString() !== req.user._id) {
-      res.status(HTTP_STATUS_FORBIDDEN).json({ message: 'You are not allowed to delete this card' });
-      return;
+      throw ForbiddenError({ message: 'You are not allowed to delete this card' });
     }
-
-    await Card.deleteOne({ _id: req.params.cardId });
+    await card.deleteOne();
     res.status(HTTP_STATUS_OK).json(card);
   } catch (err) {
-    if (err instanceof mongoose.Error.CastError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Incorrect ID' });
-      return;
+    if (err instanceof TypeError) {
+      next(new NotFoundError('Card not found'));
+    } else if (err instanceof mongoose.Error.CastError) {
+      next(new BadRequestError('Incorrect ID'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
