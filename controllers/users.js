@@ -7,8 +7,11 @@ const BadRequestError = require('../errors/bad-request-err');
 const NotFoundError = require('../errors/not-found-err');
 const ConflictError = require('../errors/conflict-err');
 const InternalServerError = require('../errors/internal-server-err');
+const UnauthorizedError = require('../errors/unauthorized-err');
+
 require('dotenv').config();
 
+const JWT_SECRET = 'fcbefc985e39544e8cdbd19cfbed78dd4d81562a7acec0b6d58bc0e9809eb958';
 const {
   HTTP_STATUS_OK,
   HTTP_STATUS_CREATED,
@@ -42,7 +45,7 @@ exports.login = async (req, res, next) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      throw new NotFoundError('Invalid email or password');
+      throw new UnauthorizedError('Invalid email or password');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -50,7 +53,7 @@ exports.login = async (req, res, next) => {
       throw new NotFoundError('Invalid email or password');
     }
 
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ _id: user._id }, JWT_SECRET, {
       expiresIn: '7d',
     });
 
