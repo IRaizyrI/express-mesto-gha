@@ -80,7 +80,7 @@ exports.createUser = async (req, res, next) => {
       email,
       password: hashedPassword,
     });
-
+    user.password = undefined;
     res.status(HTTP_STATUS_CREATED).json(user);
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
