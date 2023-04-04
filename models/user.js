@@ -17,10 +17,13 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     required: true,
+
     validate: {
-      validator: (value) => validator.isURL(value),
-      // eslint-disable-next-line max-len
-      // const urlRegex = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/;
+      validator: (value) => {
+        // validator: (value) => validator.isURL(value),
+        const urlRegex = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_+.~#?&//=]*)/;
+        return urlRegex.test(value);
+      },
       message: 'Некорректный формат URL',
     },
   },

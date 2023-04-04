@@ -3,54 +3,51 @@ const http2 = require('node:http2');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const BadRequestError = require('../errors/bad-request-err');
+const NotFoundError = require('../errors/not-found-err');
+const ConflictError = require('../errors/conflict-err');
+const InternalServerError = require('../errors/internal-server-err');
 require('dotenv').config();
 
 const {
   HTTP_STATUS_OK,
-  HTTP_STATUS_NOT_FOUND,
-  HTTP_STATUS_BAD_REQUEST,
-  HTTP_STATUS_INTERNAL_SERVER_ERROR,
   HTTP_STATUS_CREATED,
 } = http2.constants;
 
-exports.getUsers = async (req, res) => {
+exports.getUsers = async (req, res, next) => {
   try {
     const users = await User.find({});
     res.status(HTTP_STATUS_OK).json(users);
   } catch (err) {
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+    next(new InternalServerError('Error fetching users'));
   }
 };
-exports.getCurrentUser = async (req, res) => {
+exports.getCurrentUser = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const user = await User.findById(userId);
 
     if (!user) {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'Пользователь не найден' });
-      return;
+      throw new NotFoundError('User not found');
     }
 
     res.status(HTTP_STATUS_OK).json(user);
   } catch (err) {
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Ошибка сервера' });
+    next(err);
   }
 };
 
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid email or password' });
-      return;
+      throw new NotFoundError('Invalid email or password');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid email or password' });
-      return;
+      throw new NotFoundError('Invalid email or password');
     }
 
     const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
@@ -60,13 +57,13 @@ exports.login = async (req, res) => {
     res.status(HTTP_STATUS_OK).cookie('jwt', token, {
       maxAge: 3600000,
       httpOnly: true,
-    });
+    }).end();
   } catch (err) {
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+    next(err);
   }
 };
 
-exports.createUser = async (req, res) => {
+exports.createUser = async (req, res, next) => {
   try {
     const {
       name, about, avatar, email, password,
@@ -84,35 +81,34 @@ exports.createUser = async (req, res) => {
     res.status(HTTP_STATUS_CREATED).json(user);
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
-      return;
+      next(new BadRequestError('Invalid user data'));
     }
     if (err.code === 11000) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
-      return;
+      next(new ConflictError('User with this email already exists'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
 
-exports.getUserById = async (req, res) => {
+exports.getUserById = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.userId);
     if (user) {
       res.status(HTTP_STATUS_OK).json(user);
     } else {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'User not found' });
+      throw new NotFoundError('User not found');
     }
   } catch (err) {
     if (err instanceof mongoose.Error.CastError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Incorrect ID' });
-      return;
+      next(new BadRequestError('Incorrect ID'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
 
-exports.updateProfile = async (req, res) => {
+exports.updateProfile = async (req, res, next) => {
   try {
     const { name, about } = req.body;
     const updateData = {};
@@ -127,18 +123,18 @@ exports.updateProfile = async (req, res) => {
     if (user) {
       res.status(HTTP_STATUS_OK).json(user);
     } else {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'User not found' });
+      throw new NotFoundError('User not found');
     }
   } catch (err) {
     if (err instanceof mongoose.Error.ValidationError) {
-      res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Invalid Data' });
-      return;
+      next(new BadRequestError('Invalid Data'));
+    } else {
+      next(err);
     }
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
   }
 };
 
-exports.updateAvatar = async (req, res) => {
+exports.updateAvatar = async (req, res, next) => {
   try {
     const { avatar } = req.body;
     const user = await User.findByIdAndUpdate(
@@ -149,9 +145,9 @@ exports.updateAvatar = async (req, res) => {
     if (user) {
       res.status(HTTP_STATUS_OK).json(user);
     } else {
-      res.status(HTTP_STATUS_NOT_FOUND).json({ message: 'User not found' });
+      throw new NotFoundError('User not found');
     }
   } catch (err) {
-    res.status(HTTP_STATUS_INTERNAL_SERVER_ERROR).json({ message: 'Server Error' });
+    next(err);
   }
 };

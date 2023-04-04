@@ -1,31 +1,22 @@
 const jwt = require('jsonwebtoken');
-const http2 = require('node:http2');
+const UnauthorizedError = require('../errors/unauthorized-err');
 require('dotenv').config();
 
-const {
-  HTTP_STATUS_BAD_REQUEST,
-} = http2.constants;
-require('dotenv').config();
-
-const auth = (req, res, next) => {
-  const token = req.cookies.jwt;
-
-  if (!token) {
-    res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Необходима авторизация' });
-    return;
-  }
-
-  let payload;
-
+const auth = async (req, res, next) => {
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (err) {
-    res.status(HTTP_STATUS_BAD_REQUEST).json({ message: 'Необходима авторизация' });
-    return;
-  }
+    const token = req.cookies.jwt;
 
-  req.user = payload;
-  next();
+    if (!token) {
+      throw new UnauthorizedError('Authorization required');
+    }
+
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+
+    req.user = payload;
+    next();
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = auth;
