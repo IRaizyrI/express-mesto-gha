@@ -6,6 +6,7 @@ const router = express.Router();
 const userController = require('../controllers/users');
 
 router.get('/', userController.getUsers);
+router.get('/me', userController.getCurrentUser);
 router.get(
   '/:userId',
   celebrate({
@@ -15,8 +16,6 @@ router.get(
   }),
   userController.getUserById,
 );
-
-router.get('/me', userController.getCurrentUser);
 
 router.patch(
   '/me',
