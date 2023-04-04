@@ -79,10 +79,10 @@ exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
     if (card.owner.toString() !== req.user._id) {
-      throw ForbiddenError({ message: 'You are not allowed to delete this card' });
+      throw new ForbiddenError('You are not allowed to delete this card');
     }
-    res.status(HTTP_STATUS_OK).json(card);
     await card.deleteOne();
+    res.status(HTTP_STATUS_OK).json(card);
   } catch (err) {
     if (err instanceof TypeError) {
       next(new NotFoundError('Card not found'));
