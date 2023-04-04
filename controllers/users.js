@@ -21,7 +21,7 @@ exports.getUsers = async (req, res, next) => {
     const users = await User.find({});
     res.status(HTTP_STATUS_OK).json(users);
   } catch (err) {
-    next({ message: 'Something went wrong' });
+    next(err);
   }
 };
 exports.getCurrentUser = async (req, res, next) => {
