@@ -32,7 +32,7 @@ router.patch(
   '/me/avatar',
   celebrate({
     body: Joi.object().keys({
-      avatar: Joi.string().uri().required(),
+      avatar: Joi.string().uri({ domain: {} }).required(),
     }),
   }),
   userController.updateAvatar,

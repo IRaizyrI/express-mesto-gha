@@ -60,7 +60,7 @@ exports.login = async (req, res, next) => {
     res.status(HTTP_STATUS_OK).cookie('jwt', token, {
       maxAge: 3600000,
       httpOnly: true,
-    }).end();
+    }).json({ message: 'Authorization successful' });
   } catch (err) {
     next(err);
   }
