@@ -61,9 +61,13 @@ app.use(errors());
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || HTTP_STATUS_INTERNAL_SERVER_ERROR;
   const { message } = err;
-  res.status(statusCode).json({ message });
-  // Explicitly call next with 'null' to indicate completed error handling
-  next(null);
+  if (statusCode == HTTP_STATUS_INTERNAL_SERVER_ERROR){
+    res.status(statusCode);
+    console.error(statusCode + ' ' + message);
+  } else {
+    res.status(statusCode).json({ message });
+  }
+  next();
 });
 
 app.listen(3000, () => {

@@ -78,15 +78,16 @@ exports.dislikeCard = async (req, res, next) => {
 exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
+    if (!card){
+      throw new NotFoundError('Card not found');
+    }
     if (card.owner.toString() !== req.user._id) {
       throw new ForbiddenError('You are not allowed to delete this card');
     }
     await card.deleteOne();
     res.status(HTTP_STATUS_OK).json(card);
   } catch (err) {
-    if (err instanceof TypeError) {
-      next(new NotFoundError('Card not found'));
-    } else if (err instanceof mongoose.Error.CastError) {
+    if (err instanceof mongoose.Error.CastError) {
       next(new BadRequestError('Incorrect ID'));
     } else {
       next(err);
