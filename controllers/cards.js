@@ -78,7 +78,7 @@ exports.dislikeCard = async (req, res, next) => {
 exports.deleteCard = async (req, res, next) => {
   try {
     const card = await Card.findById(req.params.cardId);
-    if (!card){
+    if (!card) {
       throw new NotFoundError('Card not found');
     }
     if (card.owner.toString() !== req.user._id) {

@@ -7,7 +7,7 @@ const JWT_SECRET = 'fcbefc985e39544e8cdbd19cfbed78dd4d81562a7acec0b6d58bc0e9809e
 const auth = async (req, res, next) => {
   try {
     const token = req.cookies.jwt;
-    if (!token){
+    if (!token) {
       throw new UnauthorizedError('Authorization required');
     }
     const payload = jwt.verify(token, JWT_SECRET);
@@ -15,8 +15,8 @@ const auth = async (req, res, next) => {
     req.user = payload;
     next();
   } catch (err) {
-      next(err);
-    }
+    next(err);
+  }
 };
 
 module.exports = auth;
