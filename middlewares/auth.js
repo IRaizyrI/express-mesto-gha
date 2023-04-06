@@ -8,14 +8,14 @@ const auth = async (req, res, next) => {
   try {
     const token = req.cookies.jwt;
     if (!token) {
-      throw new UnauthorizedError('Authorization required');
+      next(new UnauthorizedError('Authorization required'));
+      return;
     }
     const payload = jwt.verify(token, JWT_SECRET);
-
     req.user = payload;
     next();
   } catch (err) {
-    next(err);
+    next(new UnauthorizedError('Authorization required'));
   }
 };
 

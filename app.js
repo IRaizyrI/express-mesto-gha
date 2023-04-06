@@ -62,7 +62,7 @@ app.use((err, req, res, next) => {
   const statusCode = err.statusCode || HTTP_STATUS_INTERNAL_SERVER_ERROR;
   const { message } = err;
   if (statusCode === HTTP_STATUS_INTERNAL_SERVER_ERROR) {
-    res.status(statusCode);
+    res.status(statusCode).json({ message: 'Server Error' });
     console.error(`${statusCode} ${message}`);
   } else {
     res.status(statusCode).json({ message });
